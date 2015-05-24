@@ -13,7 +13,7 @@ from readability.readability import Document
 
 IMAGES = 'images'
 CACHE = 'cache'
-BASE_URL = 'http://plain.press'
+BASE_URL = 'http://127.0.0.1:8080'
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 images_dir = os.path.join(current_dir,'..',IMAGES)
@@ -56,11 +56,9 @@ class Rich(object):
 		body = html.fromstring(content)
 		links = body.xpath('//a/@href')
 		if links:
-			links = [(urlparse.urljoin(self.url, url),url) for url in links]
-			for url, original in links:
-				print "++=======" + original + " or  "+ url;
-				plain_url = url
-				content = content.replace(original,plain_url)
+			for url in links:
+				print "++=======" + url;
+				content = content.replace(url,re.sub(r"https?://", "", url))
 		return content;
 
 	def liberate(self):
