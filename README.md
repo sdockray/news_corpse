@@ -14,6 +14,10 @@ pip install redis
 pip install readability-lxml
 pip install requests
 pip install cherrypy
+
+mkdir images
+mkdir cache
+python newscorpse/server.py
 ```
 
 * Usage
