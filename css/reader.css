@@ -1,0 +1,17 @@
+
+body {
+	width: 80%;
+	margin:0 auto;
+}
+
+img {
+	width:100%;
+}
+
+@media screen and (min-width: 768px) {
+	body {
+		width:600px;
+		
+	}
+}
+

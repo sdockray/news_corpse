@@ -18,16 +18,19 @@ clicks going to those corporations who are working against your values.
 
 IMAGES = 'images'
 CACHE = 'cache'
+CSS = 'css'
+READER_CSS = CSS+'/reader.css'
 WHITELIST = ['smh.com.au','theage.com.au','theaustralian.com.au','afr.com.au','news.com.au','heraldsun.com.au','dailytelegraph.com.au','couriermail.com.au','abc.net.au']
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 images_dir = os.path.join(current_dir,'..',IMAGES)
 cache_dir = os.path.join(current_dir,'..',CACHE)
-
+css_dir = os.path.join(current_dir,'..',CSS)
 # Is the page handled?
 def whitelisted(url):
 	for w in WHITELIST:
-		if w in url:
+		#could be further refined to make sure is begining of url
+		if w in url: 
 			return True
 	return False
 
@@ -67,10 +70,10 @@ class Rich(object):
 	def replace_links(self,content):
 		body = html.fromstring(content)
 		links = body.xpath('//a/@href')
+		links = [(urlparse.urljoin(self.url, url),url) for url in links]
 		if links:
-			for url in links:
-				print "++=======" + url;
-				content = content.replace(url,re.sub(r"https?://", "/", url))
+			for url, original_url in links:
+				content = content.replace(original_url,re.sub(r"https?://", "/", url))
 		return content;
 
 	def inject_meta(self, title, content):
@@ -79,9 +82,10 @@ class Rich(object):
 			'<head><title>%s</title>%s</head><body><h1>%s</h1>' % (
 				title,
 				"""
-				<meta property="og:title" content="%s" /> 
-	  		<meta property="og:description" content="%s" /> 
-	  		""" % (title, MANIFESTO),
+				<meta property="og:title" content="%s" />
+	  			<meta property="og:description" content="%s" />
+	  			<link rel="stylesheet" type="text/css" href="/%s" />
+	  		""" % (title, MANIFESTO, READER_CSS),
 				title
 		))
 
@@ -115,24 +119,22 @@ class Poor(object):
 			raise cherrypy.HTTPRedirect('http://'+u)
 		return Rich(u).liberate() 
 
+	#this is taken care of by nginx on server
 	@cherrypy.expose
 	def images(self, name):
-		print 'IMAGES';
 		return serve_file(os.path.join(images_dir,name))
 
+	#this is taken care of by nginx on server
+	@cherrypy.expose
+	def css(self, name):
+		return serve_file(os.path.join(css_dir,name))
+	
 	@cherrypy.expose
 	def index(self, url=None):
 		if url:
 			raise cherrypy.HTTPRedirect(cherrypy.request.base + '/' + re.sub(r"https?://", "", url))
 		else:
-			return """
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html><head><title>plain.press</title></head><body style="text-align:center; margin-top:150px;">
-<form method='get' style="width:100%; margin:'0px auto'">
-<input value="" name="url" size='70' style="line-height: 20px;"/>
-<input type='submit' value='plain.press' />
-</form></body></html>
-			"""
+			return serve_file(os.path.join(current_dir,'..','index.html'))
 
 # Starting things up
 if __name__ == '__main__':
