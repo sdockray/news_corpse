@@ -11,13 +11,25 @@ from lxml import html
 import requests
 from readability.readability import Document
 
+MANIFESTO = """
+Use plain.press to stop ad revenue and user data from your shares and 
+clicks going to those corporations who are working against your values.  
+"""
+
 IMAGES = 'images'
 CACHE = 'cache'
-BASE_URL = 'http://127.0.0.1:8080'
+WHITELIST = ['smh.com.au','theage.com.au','theaustralian.com.au','afr.com.au','news.com.au','heraldsun.com.au','dailytelegraph.com.au','couriermail.com.au','abc.net.au']
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 images_dir = os.path.join(current_dir,'..',IMAGES)
 cache_dir = os.path.join(current_dir,'..',CACHE)
+
+# Is the page handled?
+def whitelisted(url):
+	for w in WHITELIST:
+		if w in url:
+			return True
+	return False
 
 # init with a url and then liberate to grab stripped down markup and images
 class Rich(object):
@@ -58,8 +70,20 @@ class Rich(object):
 		if links:
 			for url in links:
 				print "++=======" + url;
-				content = content.replace(url,re.sub(r"https?://", "", url))
+				content = content.replace(url,re.sub(r"https?://", "/", url))
 		return content;
+
+	def inject_meta(self, title, content):
+		return content.replace(
+			'<body>',
+			'<head><title>%s</title>%s</head><body><h1>%s</h1>' % (
+				title,
+				"""
+				<meta property="og:title" content="%s" /> 
+	  		<meta property="og:description" content="%s" /> 
+	  		""" % (title, MANIFESTO),
+				title
+		))
 
 	def liberate(self):
 		cached = os.path.join(cache_dir, self.hashed)
@@ -73,8 +97,11 @@ class Rich(object):
 		except:
 			return "Was that a valid url?"
 		if r.ok:
-			c = self.replace_images(Document(r.content).summary(), self.get_images(r.text))
+			title = Document(r.content).short_title()
+			html = Document(r.content).summary()
+			c = self.replace_images(html, self.get_images(r.text))
 			c = self.replace_links(c)
+			c = self.inject_meta(title, c)
 			with open(cached, 'w') as f:
 				f.write(c.encode('utf-8').strip())
 			return c
@@ -83,7 +110,10 @@ class Rich(object):
 class Poor(object):
 	@cherrypy.expose
 	def default(self, *args, **kwargs):
-		return Rich('/'.join(args)).liberate()
+		u = '/'.join(args)
+		if not whitelisted(args[0]): 
+			raise cherrypy.HTTPRedirect('http://'+u)
+		return Rich(u).liberate() 
 
 	@cherrypy.expose
 	def images(self, name):
