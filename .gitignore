@@ -61,3 +61,4 @@ old/
 *.pkl
 images/*
 cache/*
+cron/*
