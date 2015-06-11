@@ -97,8 +97,10 @@ class Rich(object):
 				return f.read()
 		# hit server
 		try:
+			print "requesting:" + self.url
 			r = requests.get(self.url, timeout=10)
-		except:
+		except Exception as e:
+			print e;
 			return "Was that a valid url?"
 		if r.ok:
 			title = Document(r.content).short_title()
